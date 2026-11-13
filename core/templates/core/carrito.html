@@ -1,0 +1,13 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Tu carrito</h1>
+<p class="ayuda">Tener productos en el carrito no reserva stock: la reserva se hace recién al confirmar la compra.</p>
+{% if lineas %}
+<table><tr><th>Producto</th><th class="n">Precio</th><th class="n">Cantidad</th><th class="n">Subtotal</th><th></th></tr>
+{% for l in lineas %}<tr><td>{{ l.producto.nombre }}</td><td class="n">{{ l.producto.precio|clp }}</td><td class="n">{{ l.cantidad }}</td><td class="n">{{ l.subtotal|clp }}</td>
+<td><form method="post" action="{% url 'carrito_quitar' l.id %}">{% csrf_token %}<button class="btn bad chico" type="submit">Quitar</button></form></td></tr>{% endfor %}
+<tr><th colspan="3" class="n">Total</th><th class="n">{{ total|clp }}</th><th></th></tr></table>
+<p><a class="btn" href="{% url 'checkout' %}">Continuar con la compra</a> <a class="btn sec" href="{% url 'catalogo' %}">Seguir comprando</a></p>
+{% else %}<div class="card">Tu carrito está vacío. <a href="{% url 'catalogo' %}">Ir al catálogo</a>.</div>{% endif %}
+{% endblock %}

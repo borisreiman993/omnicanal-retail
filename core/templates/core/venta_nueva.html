@@ -1,0 +1,10 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<h1>Nueva venta presencial · {{ sucursal }}</h1>
+<p class="ayuda">La venta solo se confirma si hay stock disponible suficiente en tu sucursal (stock registrado − reservado).</p>
+<form method="post" class="card">{% csrf_token %}{{ formset.management_form }}{{ formset.non_form_errors }}
+<table><tr><th>Producto</th><th>Cantidad</th></tr>
+{% for f in formset %}<tr><td>{{ f.producto }}{{ f.non_field_errors }}{{ f.producto.errors }}</td><td>{{ f.cantidad }}{{ f.cantidad.errors }}</td></tr>{% endfor %}</table>
+{% include "core/_campos.html" with form=extra %}
+<p><button class="btn" type="submit">Confirmar venta</button></p></form>
+{% endblock %}

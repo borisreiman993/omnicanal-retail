@@ -1,0 +1,8 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<h1>Avisos de ventas para Bodega</h1>
+<table><tr><th>Fecha</th><th>Venta</th><th>Estado</th><th></th></tr>
+{% for a in avisos %}<tr class="{% if not a.leido %}aviso-nuevo{% endif %}"><td>{{ a.creado|date:"d/m/Y H:i" }}</td><td>Venta presencial #{{ a.venta_id }} requiere preparación o entrega</td><td>{% if a.leido %}Leído{% else %}<strong>Nuevo</strong>{% endif %}</td>
+<td>{% if not a.leido %}<form method="post" action="{% url 'aviso_leido' a.id %}">{% csrf_token %}<button class="btn chico" type="submit">Marcar leído</button></form>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="4">No hay avisos.</td></tr>{% endfor %}</table>
+{% endblock %}

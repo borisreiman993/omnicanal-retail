@@ -1,0 +1,9 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Ventas de mi sucursal</h1>
+<table><tr><th>N°</th><th>Fecha</th><th>Canal</th><th>Vendedor</th><th class="n">Total</th><th></th></tr>
+{% for v in page %}<tr><td>#{{ v.id }}</td><td>{{ v.fecha|date:"d/m/Y H:i" }}</td><td>{{ v.get_canal_display }}</td><td>{{ v.vendedor|default:"—" }}</td><td class="n">{{ v.total|clp }}</td><td><a href="{% url 'venta_detalle' v.id %}">Ver</a></td></tr>
+{% empty %}<tr><td colspan="6">Sin ventas.</td></tr>{% endfor %}</table>
+<p>{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">← Anterior</a>{% endif %} Página {{ page.number }} de {{ page.paginator.num_pages }} {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Siguiente →</a>{% endif %}</p>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Confirmar compra</h1>
+<div class="pasos"><span class="paso hecho">1. Carrito</span><span class="paso actual">2. Sucursal y entrega</span><span class="paso">3. Pago</span></div>
+<div class="card"><h2>Resumen</h2>
+<table><tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Subtotal</th></tr>
+{% for l in lineas %}<tr><td>{{ l.producto.nombre }}</td><td class="n">{{ l.cantidad }}</td><td class="n">{{ l.subtotal|clp }}</td></tr>{% endfor %}
+<tr><th colspan="2" class="n">Total</th><th class="n">{{ total|clp }}</th></tr></table></div>
+<div class="card"><h2>Disponibilidad de tu carrito por sucursal</h2>
+{% for s, ok in resumen %}<p><strong>{{ s.nombre }}</strong>: {% if ok %}<span class="tag ok">Todo disponible</span>{% else %}<span class="tag bad">Falta stock</span>{% endif %}</p>{% endfor %}
+<p class="ayuda">Cada compra se atiende desde una sola sucursal.</p></div>
+<div class="card"><form method="post">{% csrf_token %}
+<label for="id_sucursal">{{ form.sucursal.label }}</label>{{ form.sucursal }}{{ form.sucursal.errors }}
+<label>{{ form.modalidad.label }}</label>
+<ul class="radio-lista">{% for r in form.modalidad %}<li><label>{{ r.tag }} {{ r.choice_label }}</label></li>{% endfor %}</ul>{{ form.modalidad.errors }}
+<div class="ayuda">Retiro en tienda: lo retiras en la sucursal elegida. Despacho: indica la dirección.</div>
+<label for="id_direccion">{{ form.direccion.label }}</label>{{ form.direccion }}{{ form.direccion.errors }}
+<p>Al continuar se reservan las unidades por {{ RESERVA_MINUTOS }} minutos mientras realizas el pago.</p>
+<button class="btn" type="submit">Reservar y pagar</button> <a class="btn sec" href="{% url 'carrito' %}">Volver al carrito</a></form></div>
+{% endblock %}

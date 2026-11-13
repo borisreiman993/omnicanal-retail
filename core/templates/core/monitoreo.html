@@ -1,0 +1,17 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<h1>Monitoreo técnico</h1>
+<p class="ayuda">Equivalente local de Azure Monitor: indicadores, actividad y registros de la aplicación.</p>
+<div class="grid">
+<div class="card"><div class="num">{{ m.notificaciones_pendientes }}</div>notificaciones pendientes</div>
+<div class="card"><div class="num">{{ m.notificaciones_fallidas }}</div>notificaciones fallidas</div>
+<div class="card"><div class="num">{{ m.logins_fallidos_24h }}</div>logins fallidos (24 h)</div>
+<div class="card"><div class="num">{{ m.accesos_denegados_24h }}</div>accesos denegados (24 h)</div>
+<div class="card"><div class="num">{{ m.errores_24h }}</div>eventos con error (24 h)</div></div>
+<h2>Operaciones de compra por estado</h2><div class="card">{% for e, n in m.operaciones_por_estado.items %}<span class="tag info">{{ e }}: {{ n }}</span> {% endfor %}</div>
+<h2>Pedidos por estado</h2><div class="card">{% for e, n in m.pedidos_por_estado.items %}<span class="tag info">{{ e }}: {{ n }}</span> {% endfor %}</div>
+<h2>Actividad reciente</h2>
+<table><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th><th>Resultado</th></tr>
+{% for a in actividad %}<tr><td>{{ a.fecha|date:"d/m H:i:s" }}</td><td>{{ a.nombre_usuario|default:"—" }}</td><td>{{ a.accion }}</td><td>{{ a.detalle }}</td><td>{% if a.exito %}<span class="tag ok">OK</span>{% else %}<span class="tag bad">Error</span>{% endif %}</td></tr>{% endfor %}</table>
+<h2>Últimas líneas del registro</h2><pre class="log">{{ log|default:"(sin registros todavía)" }}</pre>
+{% endblock %}

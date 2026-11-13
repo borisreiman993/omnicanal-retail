@@ -1,0 +1,17 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Devolución #{{ dev.id }} <span class="tag {{ dev.estado|clase_estado }}">{{ dev.get_estado_display }}</span></h1>
+<div class="card"><p>Compra original #{{ dev.venta_id }} ({{ dev.venta.get_canal_display }}, {{ dev.venta.fecha|date:"d/m/Y" }}) · Solicitud por canal {{ dev.get_canal_solicitud_display }}</p>
+<p><strong>Fundamento:</strong> {{ dev.get_fundamento_display }}{% if dev.fecha_recepcion_cliente %} · Recepción del producto: {{ dev.fecha_recepcion_cliente|date:"d/m/Y" }}{% endif %}</p>
+<p><strong>Motivo:</strong> {{ dev.motivo }}</p>{% if dev.antecedentes %}<p><strong>Antecedentes:</strong> {{ dev.antecedentes }}</p>{% endif %}
+{% if dev.justificacion %}<p><strong>Justificación de la decisión:</strong> {{ dev.justificacion }}</p>{% endif %}</div>
+<table><tr><th>Producto</th><th class="n">Cantidad solicitada</th></tr>{% for d in detalles %}<tr><td>{{ d.detalle_venta.producto.nombre }}</td><td class="n">{{ d.cantidad }}</td></tr>{% endfor %}</table>
+{% if dev.estado == "PENDIENTE" %}
+<div class="card"><h2>Evaluación</h2>
+<div class="msg {% if sugerencia == 'CUMPLE' %}success{% elif sugerencia == 'NO_CUMPLE' %}warning{% else %}info{% endif %}"><strong>Apoyo de plazos:</strong> {{ texto }}</div>
+<p class="ayuda">Aprobar no repone inventario ni ejecuta reembolsos: primero debe haber recepción física en Bodega. Si faltan antecedentes, la solicitud queda Pendiente (no es un rechazo).</p>
+<form method="post">{% csrf_token %}{% include "core/_campos.html" %}<button class="btn" type="submit">Registrar decisión</button></form></div>
+{% elif dev.estado == "APROBADA" %}<div class="msg info">Aprobada. La recepción física y la eventual reincorporación al inventario las registra el Bodeguero de la sucursal receptora.</div>{% endif %}
+<p><a href="{% url 'devoluciones' %}">← Devoluciones</a></p>
+{% endblock %}

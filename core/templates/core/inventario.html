@@ -1,0 +1,10 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<h1>Inventario · {{ sucursal }}</h1>
+<p class="ayuda">Disponible = registrado − reservado. Un ajuste no puede dejar el stock bajo las unidades reservadas.</p>
+<table><tr><th>Producto</th><th class="n">Registrado</th><th class="n">Reservado</th><th class="n">Disponible</th><th></th></tr>
+{% for f in filas %}<tr><td>{{ f.producto.nombre }}<br><span class="ayuda">{{ f.producto.sku }}</span></td>
+<td class="n">{{ f.e.stock_registrado|default:0 }}</td><td class="n">{{ f.e.stock_reservado|default:0 }}</td>
+<td class="n {% if f.e and f.e.es_critico %}crit{% endif %}">{% if f.e %}{{ f.e.disponible }}{% else %}0{% endif %}</td>
+<td><a class="btn chico" href="{% url 'inventario_ajustar' f.producto.id %}">Ajustar</a></td></tr>{% endfor %}</table>
+{% endblock %}

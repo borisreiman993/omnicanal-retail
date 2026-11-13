@@ -1,0 +1,8 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<h1>Stock crítico{% if sucursal %} · {{ sucursal }}{% endif %}</h1>
+<p class="ayuda">Existencias cuyo disponible alcanza o queda bajo el umbral configurado en cada producto.</p>
+<table><tr><th>Sucursal</th><th>Producto</th><th class="n">Registrado</th><th class="n">Reservado</th><th class="n">Disponible</th><th class="n">Umbral</th></tr>
+{% for e in existencias %}<tr><td>{{ e.sucursal }}</td><td>{{ e.producto.nombre }}</td><td class="n">{{ e.stock_registrado }}</td><td class="n">{{ e.stock_reservado }}</td><td class="n crit">{{ e.disp }}</td><td class="n">{{ e.producto.umbral_stock_critico }}</td></tr>
+{% empty %}<tr><td colspan="6">No hay existencias en condición crítica.</td></tr>{% endfor %}</table>
+{% endblock %}

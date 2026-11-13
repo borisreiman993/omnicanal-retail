@@ -1,0 +1,9 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<div class="card" style="max-width:460px;margin:auto">
+<h1>Ingresar</h1>
+<form method="post">{% csrf_token %}{% include "core/_campos.html" %}
+<p><button class="btn" type="submit">Ingresar</button></p></form>
+<p class="ayuda">¿No tienes cuenta? <a href="{% url 'registro' %}">Regístrate como cliente</a>.</p>
+</div>
+{% endblock %}

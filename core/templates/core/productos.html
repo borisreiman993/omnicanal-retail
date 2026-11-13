@@ -1,0 +1,9 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Productos</h1>
+<form method="get" style="margin-bottom:1rem"><input type="text" name="q" value="{{ q }}" placeholder="Buscar" style="max-width:260px"> <button class="btn sec" type="submit">Buscar</button> <a class="btn" href="{% url 'producto_nuevo' %}">Nuevo producto</a></form>
+<table><tr><th>SKU</th><th>Nombre</th><th class="n">Precio</th><th class="n">Umbral crítico</th><th>Estado</th><th></th></tr>
+{% for p in productos %}<tr><td>{{ p.sku }}</td><td>{{ p.nombre }}</td><td class="n">{{ p.precio|clp }}</td><td class="n">{{ p.umbral_stock_critico }}</td><td>{% if p.activo %}<span class="tag ok">Activo</span>{% else %}<span class="tag bad">Inactivo</span>{% endif %}</td><td><a href="{% url 'producto_editar' p.id %}">Editar</a></td></tr>
+{% empty %}<tr><td colspan="6">Sin productos.</td></tr>{% endfor %}</table>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<h1>Movimientos de inventario · {{ sucursal }}</h1>
+<table><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th class="n">Variación</th><th class="n">Stock resultante</th><th>Motivo</th><th>Usuario</th></tr>
+{% for m in page %}<tr><td>{{ m.fecha|date:"d/m/Y H:i" }}</td><td>{{ m.existencia.producto.nombre }}</td><td>{{ m.get_tipo_display }}</td><td class="n">{{ m.cantidad }}</td><td class="n">{{ m.stock_resultante }}</td><td>{{ m.motivo }}</td><td>{{ m.usuario|default:"—" }}</td></tr>
+{% empty %}<tr><td colspan="7">Sin movimientos.</td></tr>{% endfor %}</table>
+<p>{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">← Anterior</a>{% endif %} Página {{ page.number }} de {{ page.paginator.num_pages }} {% if page.has_next %}<a href="?page={{ page.next_page_number }}">Siguiente →</a>{% endif %}</p>
+{% endblock %}

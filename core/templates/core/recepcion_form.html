@@ -1,0 +1,8 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<h1>Registrar recepción</h1>
+<div class="card"><p>Devolución #{{ d.devolucion_id }} · {{ d.detalle_venta.producto.nombre }} · Aprobadas: {{ d.cantidad }}</p>
+<form method="post">{% csrf_token %}{% include "core/_campos.html" %}
+<p><button class="btn" type="submit">Registrar</button> <a class="btn sec" href="{% url 'recepciones' %}">Cancelar</a></p></form>
+<p class="ayuda">Las unidades dañadas o pendientes de revisión no se incorporan al stock disponible.</p></div>
+{% endblock %}

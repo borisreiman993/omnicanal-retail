@@ -1,0 +1,10 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Venta #{{ venta.id }} · {{ venta.get_canal_display }}</h1>
+<div class="card">Fecha: {{ venta.fecha|date:"d/m/Y H:i" }} · Sucursal {{ venta.sucursal }}{% if venta.cliente_nombre %} · Cliente: {{ venta.cliente_nombre }}{% endif %}{% if venta.requiere_bodega %} · <span class="tag info">Aviso enviado a Bodega</span>{% endif %}</div>
+<table><tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Precio</th><th class="n">Subtotal</th></tr>
+{% for d in detalles %}<tr><td>{{ d.producto.nombre }}</td><td class="n">{{ d.cantidad }}</td><td class="n">{{ d.precio_unitario|clp }}</td><td class="n">{{ d.subtotal|clp }}</td></tr>{% endfor %}
+<tr><th colspan="3" class="n">Total</th><th class="n">{{ venta.total|clp }}</th></tr></table>
+<p><a class="btn sec" href="{% url 'ventas' %}">← Ventas</a></p>
+{% endblock %}

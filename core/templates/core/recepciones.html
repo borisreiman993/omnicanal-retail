@@ -1,0 +1,8 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<h1>Recepción de productos devueltos</h1>
+<p class="ayuda">Solo devoluciones aprobadas. Únicamente las unidades aptas para venta vuelven al inventario, con un movimiento trazable y sin duplicarse.</p>
+<table><tr><th>Devolución</th><th>Producto</th><th class="n">Aprobadas</th><th class="n">Ya recibidas</th><th class="n">Faltan</th><th></th></tr>
+{% for f in filas %}<tr><td>#{{ f.d.devolucion_id }}</td><td>{{ f.d.detalle_venta.producto.nombre }}</td><td class="n">{{ f.d.cantidad }}</td><td class="n">{{ f.recibida }}</td><td class="n">{{ f.faltan }}</td><td><a class="btn chico" href="{% url 'recepcion_form' f.d.id %}">Registrar recepción</a></td></tr>
+{% empty %}<tr><td colspan="6">No hay devoluciones aprobadas pendientes de recepción.</td></tr>{% endfor %}</table>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Mis pedidos</h1>
+{% if pedidos %}<table><tr><th>Pedido</th><th>Fecha</th><th>Sucursal</th><th>Entrega</th><th>Estado</th><th></th></tr>
+{% for p in pedidos %}<tr><td>#{{ p.id }}</td><td>{{ p.creado|date:"d/m/Y H:i" }}</td><td>{{ p.sucursal }}</td><td>{{ p.get_modalidad_display }}</td><td><span class="tag {{ p.estado|clase_estado }}">{{ p.get_estado_display }}</span></td><td><a href="{% url 'mi_pedido' p.id %}">Ver detalle</a></td></tr>{% endfor %}</table>
+{% else %}<div class="card">Aún no tienes pedidos.</div>{% endif %}
+{% endblock %}

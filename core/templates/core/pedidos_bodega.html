@@ -1,0 +1,9 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Pedidos de mi sucursal</h1>
+<p><a class="btn sec chico" href="{% url 'pedidos_bodega' %}">Todos</a> {% for v, n in estados %}<a class="btn sec chico" href="?estado={{ v }}">{{ n }}</a> {% endfor %}</p>
+<table><tr><th>Pedido</th><th>Fecha</th><th>Cliente</th><th>Entrega</th><th>Estado</th><th></th></tr>
+{% for p in pedidos %}<tr><td>#{{ p.id }}</td><td>{{ p.creado|date:"d/m/Y H:i" }}</td><td>{{ p.cliente.get_full_name|default:p.cliente.username }}</td><td>{{ p.get_modalidad_display }}</td><td><span class="tag {{ p.estado|clase_estado }}">{{ p.get_estado_display }}</span></td><td><a href="{% url 'pedido_bodega' p.id %}">Gestionar</a></td></tr>
+{% empty %}<tr><td colspan="6">Sin pedidos.</td></tr>{% endfor %}</table>
+{% endblock %}

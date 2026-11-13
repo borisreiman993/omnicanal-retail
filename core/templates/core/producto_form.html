@@ -1,0 +1,7 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<h1>{% if producto %}Editar producto{% else %}Nuevo producto{% endif %}</h1>
+<div class="card"><form method="post">{% csrf_token %}{% include "core/_campos.html" %}
+<p><button class="btn" type="submit">Guardar</button> <a class="btn sec" href="{% url 'productos' %}">Cancelar</a></p></form>
+<p class="ayuda">El stock de cada sucursal lo actualiza el Bodeguero. El Administrador define productos, precios y el umbral de stock crítico.</p></div>
+{% endblock %}

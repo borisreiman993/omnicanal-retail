@@ -1,0 +1,8 @@
+{% extends "core/base.html" %}
+{% block contenido %}
+<h1>Ajustar inventario</h1>
+<div class="card"><p><strong>{{ producto.nombre }}</strong> · {{ sucursal }}</p>
+<p>Registrado: {{ e.stock_registrado|default:0 }} · Reservado: {{ e.stock_reservado|default:0 }}</p>
+<form method="post">{% csrf_token %}{% include "core/_campos.html" %}
+<p><button class="btn" type="submit">Registrar ajuste</button> <a class="btn sec" href="{% url 'inventario' %}">Cancelar</a></p></form></div>
+{% endblock %}

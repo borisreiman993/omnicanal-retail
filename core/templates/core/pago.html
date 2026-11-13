@@ -1,0 +1,40 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Pago de la compra</h1>
+<div class="pasos"><span class="paso hecho">1. Carrito</span><span class="paso hecho">2. Sucursal y entrega</span><span class="paso actual">3. Pago</span></div>
+<div class="card">
+<p>Operación <code>{{ op.referencia }}</code> · Sucursal <strong>{{ op.sucursal }}</strong> · {{ op.get_modalidad_display }}{% if op.direccion_despacho %} a {{ op.direccion_despacho }}{% endif %}</p>
+<table><tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Subtotal</th></tr>
+{% for d in op.detalles.all %}<tr><td>{{ d.producto.nombre }}</td><td class="n">{{ d.cantidad }}</td><td class="n">{{ d.subtotal|clp }}</td></tr>{% endfor %}
+<tr><th colspan="2" class="n">Total a pagar</th><th class="n">{{ op.total|clp }}</th></tr></table></div>
+
+{% if op.estado == "RESERVADA" %}
+  <div class="card"><h2>Pagar</h2>
+  <p>Tus unidades están reservadas. Tiempo restante: <strong id="cuenta" data-seg="{{ segundos }}">{{ segundos }} s</strong></p>
+  {% if simulado %}
+    <p class="ayuda">Pasarela de pago <strong>simulada</strong> (PayPal Sandbox). Elige el resultado que quieres probar:</p>
+    <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="modo" value="aprobar"><button class="btn ok" type="submit">Aprobar el pago</button></form>
+    <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="modo" value="rechazar"><button class="btn bad" type="submit">Rechazar el pago</button></form>
+    <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="modo" value="incierto"><button class="btn warn" type="submit">Respuesta incierta (timeout)</button></form>
+  {% else %}
+    {% if pago.url_aprobacion %}<p><a class="btn" href="{{ pago.url_aprobacion }}" target="_blank" rel="noopener">1. Aprobar el pago en PayPal Sandbox</a></p>{% endif %}
+    <form method="post">{% csrf_token %}<button class="btn ok" type="submit">2. Ya aprobé el pago: confirmar compra</button></form>
+    <p class="ayuda">La compra solo se da por pagada cuando el servidor verifica la captura con PayPal.</p>
+  {% endif %}
+  </div>
+  <script>(function(){var e=document.getElementById('cuenta');if(!e)return;var s=parseInt(e.dataset.seg,10);setInterval(function(){s=Math.max(0,s-1);e.textContent=s+' s';if(s===0)location.reload();},1000);})();</script>
+{% elif op.estado == "FINALIZADA" %}
+  <div class="msg success"><strong>¡Compra confirmada!</strong> El pago fue verificado por el servidor y tu pedido quedó registrado.</div>
+  {% if pedido %}<a class="btn" href="{% url 'mi_pedido' pedido.id %}">Ver mi pedido #{{ pedido.id }}</a>{% endif %}
+{% elif op.estado == "PAGO_INCIERTO" or op.estado == "CAPTURA_EN_PROCESO" or op.estado == "PAGADA_PENDIENTE_FINALIZAR" %}
+  <div class="msg warning"><strong>Estamos verificando tu pago.</strong> No se volverá a cobrar. Tus unidades siguen reservadas y la compra se confirmará apenas se resuelva (puedes recargar esta página).</div>
+  <form method="post">{% csrf_token %}<input type="hidden" name="modo" value="aprobar"><button class="btn sec" type="submit">Verificar nuevamente ahora</button></form>
+{% elif op.estado == "RECHAZADA" %}
+  <div class="msg error"><strong>El pago fue rechazado.</strong> No se hizo ningún cobro y se liberaron las unidades reservadas.</div><a class="btn" href="{% url 'carrito' %}">Volver al carrito</a>
+{% elif op.estado == "EXPIRADA" %}
+  <div class="msg error"><strong>La reserva venció.</strong> Las unidades se liberaron. Puedes iniciar la compra nuevamente.</div><a class="btn" href="{% url 'carrito' %}">Volver al carrito</a>
+{% else %}
+  <div class="msg warning"><strong>Operación en revisión.</strong> Detectamos una diferencia al verificar el pago. Tus unidades están protegidas y el equipo revisará el caso.</div>
+{% endif %}
+{% endblock %}

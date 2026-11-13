@@ -1,0 +1,23 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Hola, {{ user.first_name|default:user.get_username }}</h1>
+{% if es_cliente %}
+  <div class="card"><h2>Tus últimos pedidos</h2>
+  {% if pedidos %}<table><tr><th>Pedido</th><th>Estado</th><th>Entrega</th><th></th></tr>
+  {% for p in pedidos %}<tr><td>#{{ p.id }}</td><td><span class="tag {{ p.estado|clase_estado }}">{{ p.get_estado_display }}</span></td><td>{{ p.get_modalidad_display }}</td><td><a href="{% url 'mi_pedido' p.id %}">Ver</a></td></tr>{% endfor %}</table>
+  {% else %}<p>Aún no tienes pedidos. Revisa el <a href="{% url 'catalogo' %}">catálogo</a>.</p>{% endif %}</div>
+{% elif es_admin %}
+  <div class="grid"><div class="card"><div class="num">{{ n_productos }}</div>productos activos</div>
+  <div class="card"><div class="num {% if n_criticos %}crit{% endif %}">{{ n_criticos }}</div>existencias en stock crítico</div></div>
+  <a class="btn" href="{% url 'productos' %}">Administrar productos</a>
+{% elif es_vendedor %}
+  <div class="grid"><div class="card"><div class="num">{{ ventas_hoy }}</div>ventas de hoy en tu sucursal</div>
+  <div class="card"><div class="num">{{ devoluciones_pendientes }}</div>devoluciones pendientes</div></div>
+  <a class="btn" href="{% url 'venta_nueva' %}">Registrar venta</a>
+{% elif es_bodeguero %}
+  <div class="grid"><div class="card"><div class="num">{{ avisos_nuevos }}</div>avisos sin leer</div>
+  <div class="card"><div class="num">{{ pedidos_abiertos }}</div>pedidos abiertos</div>
+  <div class="card"><div class="num {% if n_criticos %}crit{% endif %}">{{ n_criticos }}</div>existencias críticas</div></div>
+{% else %}<div class="card">Tu usuario no tiene un perfil asignado. Contacta al administrador técnico.</div>{% endif %}
+{% endblock %}

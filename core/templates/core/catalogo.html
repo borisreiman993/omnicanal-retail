@@ -1,0 +1,17 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Catálogo y disponibilidad por sucursal</h1>
+<form method="get" style="margin-bottom:1rem"><input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre o código" style="max-width:320px"> <button class="btn sec" type="submit">Buscar</button></form>
+<p class="ayuda">Disponible = stock registrado − stock reservado por compras digitales en curso.</p>
+<div class="tabla-scroll"><table>
+<tr><th>Producto</th><th class="n">Precio</th>{% for s in sucursales %}<th class="n">{{ s.nombre }}</th>{% endfor %}{% if es_cliente %}<th></th>{% endif %}</tr>
+{% for f in filas %}<tr>
+  <td><strong>{{ f.producto.nombre }}</strong><br><span class="ayuda">{{ f.producto.sku }}{% if f.producto.descripcion %} · {{ f.producto.descripcion }}{% endif %}</span></td>
+  <td class="n">{{ f.producto.precio|clp }}</td>
+  {% for c in f.celdas %}<td class="n">{% if c > 0 %}{{ c }}{% else %}<span class="tag bad">Sin stock</span>{% endif %}</td>{% endfor %}
+  {% if es_cliente %}<td><form method="post" action="{% url 'carrito_agregar' %}" class="inline">{% csrf_token %}<input type="hidden" name="producto_id" value="{{ f.producto.id }}"><input type="hidden" name="volver" value="{% url 'catalogo' %}"><input type="number" name="cantidad" value="1" min="1"> <button class="btn chico" type="submit">Agregar</button></form></td>{% endif %}
+</tr>{% empty %}<tr><td colspan="{{ sucursales|length|add:3 }}">No hay productos para mostrar.</td></tr>{% endfor %}
+</table></div>
+{% if not user.is_authenticated %}<p>Para comprar, <a href="{% url 'login' %}">ingresa</a> o <a href="{% url 'registro' %}">crea tu cuenta</a>.</p>{% endif %}
+{% endblock %}

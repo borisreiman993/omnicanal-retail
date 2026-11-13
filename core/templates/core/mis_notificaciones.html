@@ -1,0 +1,9 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Notificaciones de mis pedidos</h1>
+<p class="ayuda">Se envían a tu correo. «Enviada» significa que el servicio de correo aceptó el mensaje, no que haya sido leído.</p>
+{% if notificaciones %}<table><tr><th>Fecha</th><th>Asunto</th><th>Estado del envío</th></tr>
+{% for n in notificaciones %}<tr><td>{{ n.creada|date:"d/m/Y H:i" }}</td><td>{{ n.asunto }}</td><td><span class="tag {{ n.estado|clase_estado }}">{{ n.get_estado_display }}</span></td></tr>{% endfor %}</table>
+{% else %}<div class="card">No tienes notificaciones.</div>{% endif %}
+{% endblock %}

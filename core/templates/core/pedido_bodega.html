@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Pedido #{{ pedido.id }} <span class="tag {{ pedido.estado|clase_estado }}">{{ pedido.get_estado_display }}</span></h1>
+<div class="card"><p>{{ pedido.get_modalidad_display }}{% if pedido.direccion_despacho %} · {{ pedido.direccion_despacho }}{% endif %} · Cliente: {{ pedido.cliente.get_full_name|default:pedido.cliente.username }}</p></div>
+<table><tr><th>Producto</th><th class="n">Cantidad</th></tr>{% for d in detalles %}<tr><td>{{ d.producto.nombre }}</td><td class="n">{{ d.cantidad }}</td></tr>{% endfor %}</table>
+<div class="card"><h2>Cambiar estado</h2>
+{% if pedido.modalidad == "DESPACHO" and pedido.estado != "ENTREGADO" %}
+  <h3 style="font-size:1rem">Operador logístico (RF-13)</h3>
+  {% if operador %}<p>Registrado: <strong>{{ operador.nombre }}</strong> {{ operador.contacto }} {{ operador.referencia_seguimiento }}</p>{% endif %}
+  <form method="post" action="{% url 'pedido_operador' pedido.id %}">{% csrf_token %}{% include "core/_campos.html" with form=operador_form %}<button class="btn sec" type="submit">Guardar operador</button></form><hr>
+{% endif %}
+{% if siguientes %}{% for valor, nombre in siguientes %}
+  <form method="post" action="{% url 'pedido_cambiar_estado' pedido.id %}" class="inline">{% csrf_token %}<input type="hidden" name="estado" value="{{ valor }}"><button class="btn" type="submit">Pasar a «{{ nombre }}»</button></form>
+{% endfor %}{% else %}<p>El pedido ya está en su estado final.</p>{% endif %}
+<p class="ayuda">No se permiten saltos ni retrocesos. Un pedido para retiro no pasa por «En envío». Cambiar el estado no modifica inventario ni pagos.</p></div>
+<h2>Historial</h2>
+<table><tr><th>Fecha</th><th>Cambio</th><th>Usuario</th></tr>{% for h in historial %}<tr><td>{{ h.fecha|date:"d/m/Y H:i" }}</td><td>{{ h.estado_anterior|default:"—" }} → {{ h.estado_nuevo }}</td><td>{{ h.usuario|default:"Sistema" }}</td></tr>{% endfor %}</table>
+<p><a href="{% url 'pedidos_bodega' %}">← Pedidos</a></p>
+{% endblock %}

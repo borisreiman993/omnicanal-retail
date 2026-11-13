@@ -1,0 +1,9 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Devoluciones</h1>
+<p><a class="btn" href="{% url 'devolucion_nueva' %}">Registrar solicitud</a> <a class="btn sec" href="{% url 'devoluciones' %}">Todas</a> <a class="btn sec" href="?estado=PENDIENTE">Pendientes</a></p>
+<table><tr><th>N°</th><th>Venta</th><th>Fundamento</th><th>Canal de la solicitud</th><th>Estado</th><th></th></tr>
+{% for d in devoluciones %}<tr><td>#{{ d.id }}</td><td>#{{ d.venta_id }} ({{ d.venta.get_canal_display }})</td><td>{{ d.get_fundamento_display }}</td><td>{{ d.get_canal_solicitud_display }}</td><td><span class="tag {{ d.estado|clase_estado }}">{{ d.get_estado_display }}</span></td><td><a href="{% url 'devolucion_detalle' d.id %}">Ver</a></td></tr>
+{% empty %}<tr><td colspan="6">Sin solicitudes.</td></tr>{% endfor %}</table>
+{% endblock %}

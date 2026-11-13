@@ -1,0 +1,13 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block contenido %}
+<h1>Pedido #{{ pedido.id }} <span class="tag {{ pedido.estado|clase_estado }}">{{ pedido.get_estado_display }}</span></h1>
+<div class="card"><p>{{ pedido.get_modalidad_display }} · Sucursal {{ pedido.sucursal }}{% if pedido.direccion_despacho %} · Dirección: {{ pedido.direccion_despacho }}{% endif %}</p>
+{% if operador %}<p><strong>Operador logístico:</strong> {{ operador.nombre }}{% if operador.contacto %} · {{ operador.contacto }}{% endif %}{% if operador.referencia_seguimiento %} · Seguimiento {{ operador.referencia_seguimiento }}{% endif %}</p>{% endif %}</div>
+<table><tr><th>Producto</th><th class="n">Cantidad</th><th class="n">Subtotal</th></tr>
+{% for d in detalles %}<tr><td>{{ d.producto.nombre }}</td><td class="n">{{ d.cantidad }}</td><td class="n">{{ d.subtotal|clp }}</td></tr>{% endfor %}
+<tr><th colspan="2" class="n">Total</th><th class="n">{{ pedido.venta.total|clp }}</th></tr></table>
+<h2>Seguimiento</h2>
+<table><tr><th>Fecha</th><th>Estado</th></tr>{% for h in historial %}<tr><td>{{ h.fecha|date:"d/m/Y H:i" }}</td><td>{{ h.estado_nuevo }}{% if h.nota %} · {{ h.nota }}{% endif %}</td></tr>{% endfor %}</table>
+<p><a href="{% url 'mis_pedidos' %}">← Volver a mis pedidos</a></p>
+{% endblock %}
