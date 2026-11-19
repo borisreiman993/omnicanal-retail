@@ -1,13 +1,24 @@
 {% extends "core/base.html" %}
 {% load core_extras %}
+{% block titulo %}Tu carrito · {{ NOMBRE_TIENDA }}{% endblock %}
 {% block contenido %}
 <h1>Tu carrito</h1>
 <p class="ayuda">Tener productos en el carrito no reserva stock: la reserva se hace recién al confirmar la compra.</p>
 {% if lineas %}
-<table><tr><th>Producto</th><th class="n">Precio</th><th class="n">Cantidad</th><th class="n">Subtotal</th><th></th></tr>
-{% for l in lineas %}<tr><td>{{ l.producto.nombre }}</td><td class="n">{{ l.producto.precio|clp }}</td><td class="n">{{ l.cantidad }}</td><td class="n">{{ l.subtotal|clp }}</td>
-<td><form method="post" action="{% url 'carrito_quitar' l.id %}">{% csrf_token %}<button class="btn bad chico" type="submit">Quitar</button></form></td></tr>{% endfor %}
-<tr><th colspan="3" class="n">Total</th><th class="n">{{ total|clp }}</th><th></th></tr></table>
-<p><a class="btn" href="{% url 'checkout' %}">Continuar con la compra</a> <a class="btn sec" href="{% url 'catalogo' %}">Seguir comprando</a></p>
+<div class="tabla-scroll"><table>
+<tr><th>Producto</th><th class="n">Precio</th><th>Cantidad</th><th class="n">Subtotal</th><th><span class="sr">Quitar</span></th></tr>
+{% for l in lineas %}<tr>
+  <td><div class="fila-producto">{% include "core/_foto.html" with p=l.producto clase="mini" %}<a href="{% url 'producto_detalle' l.producto.id %}">{{ l.producto.nombre }}</a></div></td>
+  <td class="n">{{ l.producto.precio|clp }}</td>
+  <td><div class="cantidad">
+    <form method="post" action="{% url 'carrito_cantidad' l.id %}">{% csrf_token %}<input type="hidden" name="cantidad" value="{{ l.cantidad|add:'-1' }}"><button class="icono-btn" type="submit" {% if l.cantidad <= 1 %}disabled{% endif %}><svg class="ico" aria-hidden="true"><use href="#i-menos"/></svg><span class="sr">Quitar una unidad de {{ l.producto.nombre }}</span></button></form>
+    <output aria-label="Cantidad de {{ l.producto.nombre }}">{{ l.cantidad }}</output>
+    <form method="post" action="{% url 'carrito_cantidad' l.id %}">{% csrf_token %}<input type="hidden" name="cantidad" value="{{ l.cantidad|add:'1' }}"><button class="icono-btn" type="submit"><svg class="ico" aria-hidden="true"><use href="#i-mas"/></svg><span class="sr">Agregar una unidad de {{ l.producto.nombre }}</span></button></form>
+  </div></td>
+  <td class="n">{{ l.subtotal|clp }}</td>
+  <td><form method="post" action="{% url 'carrito_quitar' l.id %}">{% csrf_token %}<button class="icono-btn papelera" type="submit" title="Quitar del carrito"><svg class="ico" aria-hidden="true"><use href="#i-papelera"/></svg><span class="sr">Quitar {{ l.producto.nombre }} del carrito</span></button></form></td>
+</tr>{% endfor %}
+<tr><th colspan="3" class="n">Total</th><th class="n">{{ total|clp }}</th><th></th></tr></table></div>
+<p><a class="btn acento" href="{% url 'checkout' %}">Continuar con la compra</a> <a class="btn sec" href="{% url 'catalogo' %}">Seguir comprando</a></p>
 {% else %}<div class="card">Tu carrito está vacío. <a href="{% url 'catalogo' %}">Ir al catálogo</a>.</div>{% endif %}
 {% endblock %}

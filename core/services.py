@@ -200,6 +200,26 @@ def agregar_al_carrito(cliente, producto_id, cantidad):
     return detalle
 
 
+CANTIDAD_MAXIMA_CARRITO = 99
+
+
+def cambiar_cantidad_carrito(cliente, detalle_id, cantidad):
+    """Fija la cantidad de una línea del carrito. Con 0 o menos, la línea se quita. No reserva stock (RF-07)."""
+    _exigir_rol(cliente, Perfil.CLIENTE)
+    detalle = DetalleCarrito.objects.filter(pk=detalle_id, carrito__cliente=cliente).first()
+    if not detalle:
+        raise ErrorNegocio("Ese producto ya no está en tu carrito.")
+    cantidad = int(cantidad)
+    if cantidad <= 0:
+        detalle.delete()
+        return None
+    if cantidad > CANTIDAD_MAXIMA_CARRITO:
+        raise ErrorNegocio(f"La cantidad máxima por producto es {CANTIDAD_MAXIMA_CARRITO}.")
+    detalle.cantidad = cantidad
+    detalle.save(update_fields=["cantidad"])
+    return detalle
+
+
 def quitar_del_carrito(cliente, detalle_id):
     _exigir_rol(cliente, Perfil.CLIENTE)
     DetalleCarrito.objects.filter(pk=detalle_id, carrito__cliente=cliente).delete()

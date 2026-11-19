@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+{% load core_extras %}
+{% block titulo %}{{ fila.producto.nombre }} · {{ NOMBRE_TIENDA }}{% endblock %}
+{% block contenido %}
+{% with p=fila.producto %}
+<p><a href="{% url 'catalogo' %}">← Volver al catálogo</a></p>
+<div class="detalle">
+  <div>{% include "core/_foto.html" with p=p %}</div>
+  <div class="card">
+    <span class="sku">{{ p.sku }}</span>
+    <h1>{{ p.nombre }}</h1>
+    <p class="precio" style="font-size:1.6rem">{{ p.precio|clp }}</p>
+    {% if p.descripcion %}<p>{{ p.descripcion }}</p>{% endif %}
+    <h2>Disponibilidad por sucursal</h2>
+    <table><tr><th>Sucursal</th><th class="n">Disponible</th></tr>
+    {% for d in fila.disponibilidad %}<tr><td>{{ d.sucursal.nombre }}</td><td class="n">{% if d.cantidad > 0 %}<span class="tag ok">{{ d.cantidad }} unidad{{ d.cantidad|pluralize:"es" }}</span>{% else %}<span class="tag bad">Sin stock</span>{% endif %}</td></tr>{% endfor %}
+    </table>
+    {% if es_cliente %}
+      {% if fila.total > 0 %}
+      <form method="post" action="{% url 'carrito_agregar' %}">{% csrf_token %}<input type="hidden" name="producto_id" value="{{ p.id }}"><input type="hidden" name="volver" value="{{ request.get_full_path }}">
+        <label for="cantidad-detalle">Cantidad</label><input id="cantidad-detalle" type="number" name="cantidad" value="1" min="1" max="99" style="width:6rem">
+        <p><button class="btn acento" type="submit"><svg class="ico" aria-hidden="true"><use href="#i-carrito"/></svg>Agregar al carrito</button></p></form>
+      <p class="ayuda">Agregar al carrito no reserva stock: la reserva se hace al confirmar la compra.</p>
+      {% else %}<p class="ayuda">Este producto no tiene stock disponible en este momento.</p>{% endif %}
+    {% elif not user.is_authenticated %}<p><a href="{% url 'login' %}">Ingresa</a> o <a href="{% url 'registro' %}">crea tu cuenta</a> para comprar.</p>{% endif %}
+  </div>
+</div>
+{% endwith %}
+{% endblock %}

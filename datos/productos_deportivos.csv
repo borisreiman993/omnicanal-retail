@@ -1,0 +1,28 @@
+sku,nombre,descripcion,precio,umbral_stock_critico
+ZAP-001,Zapatillas running Veloz,"Zapatillas livianas para correr en asfalto, con amortiguación suave.",54990,5
+ZAP-002,Zapatillas running Maratón,Zapatillas de running con mayor soporte para distancias largas.,69990,5
+ZAP-003,Zapatillas urbanas Ciudad,"Zapatillas de uso diario, cómodas y resistentes.",44990,5
+ZAP-004,Zapatillas trail Cumbre,Suela con taco profundo para senderos y cerros.,74990,4
+ZAP-005,Zapatillas de entrenamiento Gym,Base estable para pesas y entrenamiento funcional.,49990,5
+ZAP-006,Zapatillas de baby fútbol Cancha,Para cancha sintética y baby fútbol.,39990,5
+POL-001,Polera deportiva Dry-Fit,Polera de secado rápido para entrenar.,14990,8
+POL-002,Polera manga larga térmica,Capa base térmica para días fríos.,21990,6
+POL-003,Polera de algodón básica,Polera cómoda para el día a día.,9990,8
+SHO-001,Short deportivo Runner,Short liviano con bolsillo trasero.,16990,6
+SHO-002,Short de baño deportivo,"Secado rápido, ideal para natación y playa.",15990,5
+CAL-001,Calza larga de entrenamiento,Calza elástica con cintura alta.,24990,6
+POL-004,Polerón con capucha Training,Polerón de polar liviano para calentar.,32990,5
+BAL-001,Balón de fútbol N°5,"Balón de fútbol cosido a máquina, tamaño oficial.",19990,6
+BAL-002,Balón de baby fútbol,Balón de bote controlado para cancha chica.,17990,6
+BAL-003,Balón de básquetbol N°7,Balón de goma para exterior e interior.,21990,5
+BAL-004,Balón de vóleibol,Balón suave de cuero sintético.,18990,5
+ACC-001,Botella deportiva 750 ml,Botella reutilizable libre de BPA.,7990,10
+ACC-002,Mochila deportiva 25 L,Mochila liviana con compartimento para zapatillas.,29990,5
+ACC-003,Guantes de entrenamiento,Guantes acolchados para pesas.,12990,6
+ACC-004,Colchoneta de yoga,Colchoneta antideslizante de 6 mm.,19990,5
+ACC-005,Cuerda para saltar,Cuerda ajustable con rodamientos.,6990,8
+ACC-006,Bandas elásticas set x3,Tres niveles de resistencia para ejercicios.,11990,6
+ACC-007,Mancuernas ajustables 10 kg,Par de mancuernas con discos intercambiables.,39990,4
+ACC-008,Calcetines deportivos pack x3,Calcetines acolchados de caña media.,8990,10
+ACC-009,Gorro de natación,"Gorro de silicona, ajuste cómodo.",5990,8
+ACC-010,Rodilleras deportivas,Soporte elástico para entrenamiento y deportes de equipo.,13990,5

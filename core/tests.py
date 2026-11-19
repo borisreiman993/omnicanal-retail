@@ -1,9 +1,14 @@
+import io
+import shutil
+import tempfile
 import threading
 from datetime import timedelta
 from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.core.exceptions import PermissionDenied
 from django.db import connection
 from django.test import Client, TestCase, TransactionTestCase, override_settings
@@ -618,3 +623,218 @@ class TestConcurrencia(TransactionTestCase):
         self.assertEqual((self.exi.stock_registrado, self.exi.stock_reservado), (0, 0))
         op.refresh_from_db()
         self.assertEqual(op.pago.intentos, 1)
+
+
+# --------------------------------------------------------------------------- rediseño OmniSport
+
+def png_de_prueba(lado=20):
+    from PIL import Image
+    buf = io.BytesIO()
+    Image.new("RGB", (lado, lado), "red").save(buf, "PNG")
+    return buf.getvalue()
+
+
+class TestCatalogoFiltros(BaseDatos):
+    def setUp(self):
+        super().setUp()
+        self.p3 = Producto.objects.create(sku="C-1", nombre="Zapatillas Cumbre", precio=60000)
+        Existencia.objects.create(producto=self.p3, sucursal=self.norte, stock_registrado=4)
+
+    def nombres(self, **params):
+        r = self.client.get(reverse("catalogo"), params)
+        self.assertEqual(r.status_code, 200)
+        return [f["producto"].nombre for f in r.context["filas"]]
+
+    def test_sin_filtros_muestra_solo_productos_activos_ordenados_por_nombre(self):
+        Producto.objects.create(sku="X-1", nombre="Oculto", precio=1000, activo=False)
+        self.assertEqual(self.nombres(), ["Producto A", "Producto B", "Zapatillas Cumbre"])
+
+    def test_buscar_por_nombre_o_codigo(self):
+        self.assertEqual(self.nombres(q="zapat"), ["Zapatillas Cumbre"])
+        self.assertEqual(self.nombres(q="b-1"), ["Producto B"])
+
+    def test_rango_de_precio(self):
+        self.assertEqual(self.nombres(precio_min=6000, precio_max=20000), ["Producto A"])
+
+    def test_orden_por_precio(self):
+        self.assertEqual(self.nombres(orden="precio_asc"), ["Producto B", "Producto A", "Zapatillas Cumbre"])
+        self.assertEqual(self.nombres(orden="precio_desc"), ["Zapatillas Cumbre", "Producto A", "Producto B"])
+
+    def test_solo_con_stock_usa_disponible_y_no_solo_el_registrado(self):
+        # B tiene 2 en Centro; se reservan las 2 -> disponible 0 -> no aparece
+        Existencia.objects.filter(pk=self.e2.pk).update(stock_reservado=2)
+        self.assertEqual(self.nombres(disponibles="on"), ["Producto A", "Zapatillas Cumbre"])
+
+    def test_solo_con_stock_respeta_la_sucursal_elegida(self):
+        self.assertEqual(self.nombres(disponibles="on", sucursal=self.norte.id), ["Producto A", "Zapatillas Cumbre"])
+        self.assertEqual(self.nombres(disponibles="on", sucursal=self.centro.id), ["Producto A", "Producto B"])
+
+    def test_la_sucursal_elegida_limita_las_columnas_de_disponibilidad(self):
+        r = self.client.get(reverse("catalogo"), {"sucursal": self.norte.id})
+        self.assertEqual([d["sucursal"] for d in r.context["filas"][0]["disponibilidad"]], [self.norte])
+
+    def test_filtro_invalido_no_rompe_la_pagina(self):
+        r = self.client.get(reverse("catalogo"), {"precio_min": "-5", "orden": "inventado"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.context["filas"]), 3)
+
+    def test_paginacion_conserva_los_filtros(self):
+        for i in range(30):
+            Producto.objects.create(sku=f"M-{i:02d}", nombre=f"Masivo {i:02d}", precio=1000 + i)
+        r = self.client.get(reverse("catalogo"), {"q": "Masivo"})
+        self.assertEqual(len(r.context["filas"]), 24)
+        self.assertContains(r, "q=Masivo&amp;page=2")
+        r2 = self.client.get(reverse("catalogo"), {"q": "Masivo", "page": 2})
+        self.assertEqual(len(r2.context["filas"]), 6)
+
+    def test_el_boton_agregar_solo_aparece_para_clientes_y_con_stock(self):
+        r = self.client.get(reverse("catalogo"))
+        self.assertNotContains(r, "Agregar</button>")
+        self.assertContains(r, "para comprar")
+        self.client.force_login(self.cliente)
+        self.assertContains(self.client.get(reverse("catalogo")), "Agregar</button>")
+        self.client.force_login(self.vendedor)
+        self.assertNotContains(self.client.get(reverse("catalogo")), "Agregar</button>")
+
+
+class TestDetalleProducto(BaseDatos):
+    def test_detalle_muestra_disponibilidad_por_sucursal(self):
+        r = self.client.get(reverse("producto_detalle", args=[self.p1.id]))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "10 unidades")
+        self.assertContains(r, "5 unidades")
+
+    def test_producto_inactivo_da_404(self):
+        self.p1.activo = False
+        self.p1.save()
+        self.assertEqual(self.client.get(reverse("producto_detalle", args=[self.p1.id])).status_code, 404)
+
+
+class TestCarritoCantidad(BaseDatos):
+    def setUp(self):
+        super().setUp()
+        self.det = services.agregar_al_carrito(self.cliente, self.p1.id, 2)
+        self.client.force_login(self.cliente)
+
+    def poner(self, cantidad, detalle=None):
+        return self.client.post(reverse("carrito_cantidad", args=[(detalle or self.det).id]), {"cantidad": cantidad}, follow=True)
+
+    def test_cambiar_cantidad_no_reserva_stock(self):
+        self.poner(5)
+        self.det.refresh_from_db()
+        self.assertEqual(self.det.cantidad, 5)
+        self.refrescar(self.e1)
+        self.assertEqual(self.e1.stock_reservado, 0)
+
+    def test_cantidad_cero_quita_la_linea(self):
+        self.poner(0)
+        self.assertFalse(type(self.det).objects.filter(pk=self.det.pk).exists())
+
+    def test_cantidad_sobre_el_maximo_se_rechaza(self):
+        r = self.poner(services.CANTIDAD_MAXIMA_CARRITO + 1)
+        self.det.refresh_from_db()
+        self.assertEqual(self.det.cantidad, 2)
+        self.assertContains(r, "cantidad máxima")
+
+    def test_cantidad_no_numerica_se_rechaza(self):
+        r = self.poner("abc")
+        self.det.refresh_from_db()
+        self.assertEqual(self.det.cantidad, 2)
+        self.assertContains(r, "cantidad válida")
+
+    def test_no_se_puede_modificar_el_carrito_de_otro_cliente(self):
+        otro = services.agregar_al_carrito(self.cliente2, self.p2.id, 1)
+        self.poner(9, detalle=otro)
+        otro.refresh_from_db()
+        self.assertEqual(otro.cantidad, 1)
+
+    def test_solo_los_clientes_y_solo_por_post(self):
+        self.client.force_login(self.vendedor)
+        self.assertEqual(self.client.post(reverse("carrito_cantidad", args=[self.det.id]), {"cantidad": 3}).status_code, 403)
+        self.client.force_login(self.cliente)
+        self.assertEqual(self.client.get(reverse("carrito_cantidad", args=[self.det.id])).status_code, 405)
+
+    def test_el_icono_del_carrito_cuenta_las_unidades(self):
+        r = self.client.get(reverse("catalogo"))
+        self.assertContains(r, 'class="badge" aria-hidden="true">2<')
+
+
+class TestFotosDeProductos(BaseDatos):
+    def setUp(self):
+        super().setUp()
+        self.media = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.media, ignore_errors=True)
+        self.client.force_login(self.admin)
+
+    def datos(self, **extra):
+        base = {"sku": "FOTO-1", "nombre": "Zapatilla con foto", "descripcion": "", "precio": 30000, "umbral_stock_critico": 5, "activo": "on"}
+        base.update(extra)
+        return base
+
+    def test_el_administrador_sube_una_foto_y_se_muestra(self):
+        with override_settings(MEDIA_ROOT=self.media):
+            foto = SimpleUploadedFile("zapatilla.png", png_de_prueba(), content_type="image/png")
+            r = self.client.post(reverse("producto_nuevo"), self.datos(imagen=foto))
+            self.assertEqual(r.status_code, 302)
+            p = Producto.objects.get(sku="FOTO-1")
+            self.assertTrue(p.imagen.name.startswith("productos/"))
+            html = self.client.get(reverse("catalogo")).content.decode()
+            self.assertIn(f'alt="{p.nombre}"', html)
+            self.assertIn("/media/productos/", html)
+
+    def test_sin_foto_se_muestra_un_marcador_con_texto_alternativo(self):
+        html = self.client.get(reverse("catalogo")).content.decode()
+        self.assertIn("Producto A, sin foto", html)
+
+    def test_un_archivo_que_no_es_imagen_se_rechaza(self):
+        with override_settings(MEDIA_ROOT=self.media):
+            falso = SimpleUploadedFile("virus.png", b"esto no es una imagen", content_type="image/png")
+            r = self.client.post(reverse("producto_nuevo"), self.datos(imagen=falso))
+            self.assertEqual(r.status_code, 200)
+            self.assertFalse(Producto.objects.filter(sku="FOTO-1").exists())
+
+    def test_una_foto_demasiado_pesada_se_rechaza(self):
+        with override_settings(MEDIA_ROOT=self.media, IMAGEN_PRODUCTO_MAX_MB=0):
+            foto = SimpleUploadedFile("grande.png", png_de_prueba(), content_type="image/png")
+            r = self.client.post(reverse("producto_nuevo"), self.datos(imagen=foto))
+            self.assertEqual(r.status_code, 200)
+            self.assertContains(r, "pesa demasiado")
+
+    def test_editar_sin_cambiar_la_foto_la_conserva(self):
+        with override_settings(MEDIA_ROOT=self.media):
+            foto = SimpleUploadedFile("z.png", png_de_prueba(), content_type="image/png")
+            self.client.post(reverse("producto_nuevo"), self.datos(imagen=foto))
+            p = Producto.objects.get(sku="FOTO-1")
+            nombre = p.imagen.name
+            self.client.post(reverse("producto_editar", args=[p.id]), self.datos(nombre="Nombre nuevo"))
+            p.refresh_from_db()
+            self.assertEqual((p.nombre, p.imagen.name), ("Nombre nuevo", nombre))
+
+    def test_otros_perfiles_no_pueden_subir_fotos(self):
+        self.client.force_login(self.bodeguero)
+        self.assertEqual(self.client.post(reverse("producto_nuevo"), self.datos()).status_code, 403)
+
+
+class TestCatalogoDeportivo(BaseDatos):
+    def test_carga_productos_y_stock_sin_duplicar(self):
+        call_command("cargar_catalogo_deportivo", stdout=io.StringIO())
+        n = Producto.objects.filter(sku__startswith="ZAP-").count()
+        self.assertGreater(n, 0)
+        self.assertTrue(Existencia.objects.filter(producto__sku__startswith="ZAP-", sucursal=self.centro, stock_registrado__gt=0).exists())
+        total = (Producto.objects.count(), Existencia.objects.count())
+        call_command("cargar_catalogo_deportivo", stdout=io.StringIO())
+        self.assertEqual((Producto.objects.count(), Existencia.objects.count()), total)
+
+    def test_no_pisa_el_stock_que_ya_existe(self):
+        call_command("cargar_catalogo_deportivo", stdout=io.StringIO())
+        e = Existencia.objects.get(producto__sku="ZAP-001", sucursal=self.centro)
+        Existencia.objects.filter(pk=e.pk).update(stock_registrado=77)
+        call_command("cargar_catalogo_deportivo", stdout=io.StringIO())
+        e.refresh_from_db()
+        self.assertEqual(e.stock_registrado, 77)
+
+    def test_desactivar_ejemplos_oculta_los_productos_genericos(self):
+        Producto.objects.create(sku="PROD-001", nombre="Producto de ejemplo 01", precio=1000)
+        call_command("cargar_catalogo_deportivo", "--desactivar-ejemplos", stdout=io.StringIO())
+        self.assertFalse(Producto.objects.get(sku="PROD-001").activo)
+        self.assertTrue(Producto.objects.get(sku="ZAP-001").activo)

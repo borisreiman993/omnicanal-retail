@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.core.paginator import Paginator
 from django.db import connection
-from django.db.models import Q
+from django.db.models import Exists, F, OuterRef, Q
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,7 +14,7 @@ from django.views.decorators.http import require_POST
 
 from . import services
 from .forms import (
-    AgregarCarritoForm, AjusteForm, BuscarVentaForm, CheckoutForm, DevolucionForm, EvaluacionForm,
+    AgregarCarritoForm, AjusteForm, BuscarVentaForm, CheckoutForm, DevolucionForm, EvaluacionForm, FiltroCatalogoForm,
     ItemVentaFormSet, LoginForm, OperadorForm, ProductoForm, RecepcionForm, RegistroForm, VentaExtraForm,
 )
 from .middleware import CLAVE_INICIO
@@ -127,21 +127,60 @@ def inicio(request):
 
 # ------------------------------------------------------------------ catalogo (RF-03)
 
-def catalogo(request):
-    q = request.GET.get("q", "").strip()
-    sucursales = list(Sucursal.objects.filter(activa=True))
-    productos = Producto.objects.filter(activo=True)
-    if q:
-        productos = productos.filter(Q(nombre__icontains=q) | Q(sku__icontains=q))
-    existencias = {(e.producto_id, e.sucursal_id): e for e in Existencia.objects.filter(producto__in=productos)}
+PRODUCTOS_POR_PAGINA = 24
+
+
+def _disponibilidad(productos, sucursales):
+    """Disponible por producto y sucursal = stock registrado - reservado (RN-01)."""
+    existencias = {(e.producto_id, e.sucursal_id): e for e in Existencia.objects.filter(producto__in=productos, sucursal__in=sucursales)}
     filas = []
     for p in productos:
-        celdas = []
+        por_sucursal = []
         for s in sucursales:
             e = existencias.get((p.id, s.id))
-            celdas.append(e.disponible if e else 0)
-        filas.append({"producto": p, "celdas": celdas})
-    return render(request, "core/catalogo.html", {"filas": filas, "sucursales": sucursales, "q": q, "form": AgregarCarritoForm()})
+            por_sucursal.append({"sucursal": s, "cantidad": e.disponible if e else 0})
+        filas.append({"producto": p, "disponibilidad": por_sucursal, "total": sum(d["cantidad"] for d in por_sucursal)})
+    return filas
+
+
+def catalogo(request):
+    """RF-03: catálogo con disponibilidad por sucursal, filtros, orden y paginación."""
+    filtro = FiltroCatalogoForm(request.GET or None)
+    datos = filtro.cleaned_data if filtro.is_bound and filtro.is_valid() else {}
+    todas = list(Sucursal.objects.filter(activa=True))
+    sucursal = datos.get("sucursal")
+    sucursales = [sucursal] if sucursal else todas
+
+    productos = Producto.objects.filter(activo=True)
+    q = (datos.get("q") or "").strip()
+    if q:
+        productos = productos.filter(Q(nombre__icontains=q) | Q(sku__icontains=q))
+    if datos.get("precio_min") is not None:
+        productos = productos.filter(precio__gte=datos["precio_min"])
+    if datos.get("precio_max") is not None:
+        productos = productos.filter(precio__lte=datos["precio_max"])
+    if datos.get("disponibles"):
+        con_stock = Existencia.objects.filter(producto=OuterRef("pk"), stock_registrado__gt=F("stock_reservado"), sucursal__in=sucursales)
+        productos = productos.filter(Exists(con_stock))
+    orden = {"precio_asc": ("precio", "nombre"), "precio_desc": ("-precio", "nombre")}.get(datos.get("orden"), ("nombre", "id"))
+    productos = productos.order_by(*orden)
+
+    pagina = Paginator(productos, PRODUCTOS_POR_PAGINA).get_page(request.GET.get("page"))
+    consulta = request.GET.copy()
+    consulta.pop("page", None)
+    return render(request, "core/catalogo.html", {
+        "filas": _disponibilidad(list(pagina.object_list), sucursales), "pagina": pagina, "filtro": filtro,
+        "consulta": consulta.urlencode(), "hay_filtros": any(v.strip() for k, v in request.GET.items() if k != "page"),
+        "total": pagina.paginator.count,
+    })
+
+
+def producto_detalle(request, producto_id):
+    """Detalle de un producto: foto, descripción y disponibilidad en cada sucursal."""
+    producto = get_object_or_404(Producto, pk=producto_id, activo=True)
+    sucursales = list(Sucursal.objects.filter(activa=True))
+    fila = _disponibilidad([producto], sucursales)[0]
+    return render(request, "core/producto_detalle.html", {"fila": fila, "form": AgregarCarritoForm(initial={"producto_id": producto.id})})
 
 
 # ------------------------------------------------------------------ carrito y compra (RF-07/08/09)
@@ -167,6 +206,16 @@ def carrito_agregar(request):
     else:
         messages.error(request, "Indica una cantidad válida.")
     return redirect(request.POST.get("volver") or "catalogo") if url_has_allowed_host_and_scheme(request.POST.get("volver") or "/", allowed_hosts={request.get_host()}) else redirect("catalogo")
+
+
+@rol_requerido(CLIENTE)
+@require_POST
+def carrito_cantidad(request, detalle_id):
+    try:
+        services.cambiar_cantidad_carrito(request.user, detalle_id, request.POST.get("cantidad", ""))
+    except (ErrorNegocio, ValueError) as exc:
+        messages.error(request, str(exc) if isinstance(exc, ErrorNegocio) else "Indica una cantidad válida.")
+    return redirect("carrito")
 
 
 @rol_requerido(CLIENTE)
@@ -260,7 +309,7 @@ def productos(request):
 @rol_requerido(ADMIN)
 def producto_form(request, producto_id=None):
     producto = get_object_or_404(Producto, pk=producto_id) if producto_id else None
-    form = ProductoForm(request.POST or None, instance=producto)
+    form = ProductoForm(request.POST or None, request.FILES or None, instance=producto)
     if request.method == "POST" and form.is_valid():
         p = form.save()
         registrar_actividad(request.user, "PRODUCTO_EDITADO" if producto else "PRODUCTO_CREADO", f"{p.sku} - {p.nombre}")

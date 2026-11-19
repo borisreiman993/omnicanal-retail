@@ -1,7 +1,10 @@
 {% extends "core/base.html" %}
 {% block contenido %}
 <h1>{% if producto %}Editar producto{% else %}Nuevo producto{% endif %}</h1>
-<div class="card"><form method="post">{% csrf_token %}{% include "core/_campos.html" %}
+<div class="card"><form method="post" enctype="multipart/form-data">{% csrf_token %}
+{% if producto and producto.imagen %}<p>{% include "core/_foto.html" with p=producto clase="mini" %}</p>{% endif %}
+{% include "core/_campos.html" %}
+<p class="ayuda">Foto: formato JPG, PNG o WEBP, de hasta 2 MB. Se ve mejor si es cuadrada (por ejemplo, 800×800 píxeles).</p>
 <p><button class="btn" type="submit">Guardar</button> <a class="btn sec" href="{% url 'productos' %}">Cancelar</a></p></form>
-<p class="ayuda">El stock de cada sucursal lo actualiza el Bodeguero. El Administrador define productos, precios y el umbral de stock crítico.</p></div>
+<p class="ayuda">El stock de cada sucursal lo actualiza el Bodeguero. El Administrador define productos, precios, fotos y el umbral de stock crítico.</p></div>
 {% endblock %}

@@ -56,6 +56,7 @@ class Producto(models.Model):
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True)
     precio = models.PositiveIntegerField(help_text="Precio en pesos chilenos (CLP).")
+    imagen = models.ImageField(upload_to="productos/", blank=True, help_text="Foto cuadrada del producto (opcional).")
     activo = models.BooleanField(default=True)
     umbral_stock_critico = models.PositiveIntegerField(default=5, help_text="RF-04: stock disponible desde el cual se marca como critico.")
     creado = models.DateTimeField(auto_now_add=True)

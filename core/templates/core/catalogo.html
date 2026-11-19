@@ -1,17 +1,55 @@
 {% extends "core/base.html" %}
 {% load core_extras %}
+{% block titulo %}Catálogo · {{ NOMBRE_TIENDA }}{% endblock %}
 {% block contenido %}
-<h1>Catálogo y disponibilidad por sucursal</h1>
-<form method="get" style="margin-bottom:1rem"><input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre o código" style="max-width:320px"> <button class="btn sec" type="submit">Buscar</button></form>
-<p class="ayuda">Disponible = stock registrado − stock reservado por compras digitales en curso.</p>
-<div class="tabla-scroll"><table>
-<tr><th>Producto</th><th class="n">Precio</th>{% for s in sucursales %}<th class="n">{{ s.nombre }}</th>{% endfor %}{% if es_cliente %}<th></th>{% endif %}</tr>
-{% for f in filas %}<tr>
-  <td><strong>{{ f.producto.nombre }}</strong><br><span class="ayuda">{{ f.producto.sku }}{% if f.producto.descripcion %} · {{ f.producto.descripcion }}{% endif %}</span></td>
-  <td class="n">{{ f.producto.precio|clp }}</td>
-  {% for c in f.celdas %}<td class="n">{% if c > 0 %}{{ c }}{% else %}<span class="tag bad">Sin stock</span>{% endif %}</td>{% endfor %}
-  {% if es_cliente %}<td><form method="post" action="{% url 'carrito_agregar' %}" class="inline">{% csrf_token %}<input type="hidden" name="producto_id" value="{{ f.producto.id }}"><input type="hidden" name="volver" value="{% url 'catalogo' %}"><input type="number" name="cantidad" value="1" min="1"> <button class="btn chico" type="submit">Agregar</button></form></td>{% endif %}
-</tr>{% empty %}<tr><td colspan="{{ sucursales|length|add:3 }}">No hay productos para mostrar.</td></tr>{% endfor %}
-</table></div>
+{% if not hay_filtros %}
+<section class="hero" aria-label="Presentación">
+  <h1>{{ NOMBRE_TIENDA }}</h1>
+  <p>{{ SLOGAN_TIENDA }}</p>
+  <ul><li>Stock real por sucursal</li><li>Reserva de {{ RESERVA_MINUTOS }} minutos al comprar</li><li>Retiro en sucursal o despacho</li></ul>
+</section>
+{% endif %}
+<h2 {% if not hay_filtros %}style="margin-top:0"{% endif %}>Catálogo y disponibilidad por sucursal</h2>
+<details class="card filtros" open>
+  <summary>Filtrar y ordenar</summary>
+  <form method="get" action="{% url 'catalogo' %}">
+    <div class="campos">
+      <div><label for="{{ filtro.q.id_for_label }}">Buscar</label>{{ filtro.q }}</div>
+      <div><label for="{{ filtro.sucursal.id_for_label }}">Sucursal</label>{{ filtro.sucursal }}</div>
+      <div><label for="{{ filtro.precio_min.id_for_label }}">Precio mínimo (CLP)</label>{{ filtro.precio_min }}</div>
+      <div><label for="{{ filtro.precio_max.id_for_label }}">Precio máximo (CLP)</label>{{ filtro.precio_max }}</div>
+      <div><label for="{{ filtro.orden.id_for_label }}">Ordenar por</label>{{ filtro.orden }}</div>
+      <div class="marca-check"><label for="{{ filtro.disponibles.id_for_label }}">{{ filtro.disponibles }} Solo con stock</label></div>
+      <div class="acciones-filtro"><button class="btn" type="submit">Aplicar</button>{% if hay_filtros %}<a class="btn sec" href="{% url 'catalogo' %}">Limpiar</a>{% endif %}</div>
+    </div>
+    {{ filtro.non_field_errors }}{% for campo in filtro %}{% if campo.errors %}<div class="errorlist" role="alert">{{ campo.label }}: {{ campo.errors|join:" " }}</div>{% endif %}{% endfor %}
+  </form>
+</details>
+<p class="resultado" aria-live="polite">{{ total }} producto{{ total|pluralize }}{% if hay_filtros %} con los filtros elegidos{% endif %}. Disponible = stock registrado − stock reservado por compras digitales en curso.</p>
+{% if filas %}
+<ul class="rejilla">
+{% for f in filas %}{% with p=f.producto %}
+  <li class="tarjeta">
+    <a href="{% url 'producto_detalle' p.id %}" tabindex="-1" aria-hidden="true">{% include "core/_foto.html" with p=p %}</a>
+    <span class="sku">{{ p.sku }}</span>
+    <h3><a href="{% url 'producto_detalle' p.id %}">{{ p.nombre }}</a></h3>
+    <span class="precio">{{ p.precio|clp }}</span>
+    <div class="chips">{% for d in f.disponibilidad %}{% if d.cantidad > 0 %}<span class="tag ok">{{ d.sucursal.nombre|cut:"Sucursal " }}: {{ d.cantidad }}</span>{% else %}<span class="tag bad">{{ d.sucursal.nombre|cut:"Sucursal " }}: sin stock</span>{% endif %}{% endfor %}</div>
+    {% if es_cliente %}
+      {% if f.total > 0 %}<form method="post" action="{% url 'carrito_agregar' %}">{% csrf_token %}<input type="hidden" name="producto_id" value="{{ p.id }}"><input type="hidden" name="volver" value="{{ request.get_full_path }}"><label class="sr" for="cant-{{ p.id }}">Cantidad de {{ p.nombre }}</label><input id="cant-{{ p.id }}" type="number" name="cantidad" value="1" min="1" max="99"><button class="btn acento" type="submit"><svg class="ico" aria-hidden="true"><use href="#i-carrito"/></svg>Agregar</button></form>{% endif %}
+    {% elif not user.is_authenticated %}<span class="ayuda"><a href="{% url 'login' %}">Ingresa</a> para comprar</span>{% endif %}
+  </li>
+{% endwith %}{% endfor %}
+</ul>
+{% if pagina.paginator.num_pages > 1 %}
+<nav class="paginacion" aria-label="Páginas del catálogo">
+  {% if pagina.has_previous %}<a class="btn sec" href="?{% if consulta %}{{ consulta }}&amp;{% endif %}page={{ pagina.previous_page_number }}">← Anterior</a>{% endif %}
+  <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+  {% if pagina.has_next %}<a class="btn sec" href="?{% if consulta %}{{ consulta }}&amp;{% endif %}page={{ pagina.next_page_number }}">Siguiente →</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<div class="card">No hay productos para mostrar{% if hay_filtros %} con esos filtros. <a href="{% url 'catalogo' %}">Quitar los filtros</a>{% endif %}.</div>
+{% endif %}
 {% if not user.is_authenticated %}<p>Para comprar, <a href="{% url 'login' %}">ingresa</a> o <a href="{% url 'registro' %}">crea tu cuenta</a>.</p>{% endif %}
 {% endblock %}

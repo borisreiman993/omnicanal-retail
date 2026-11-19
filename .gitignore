@@ -8,3 +8,4 @@ backups/*.sql
 backups/*.dump
 .vscode/
 db.sqlite3
+media/

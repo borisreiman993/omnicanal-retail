@@ -37,7 +37,8 @@ DEBUG = env_bool("DEBUG", True)
 SECRET_KEY = os.getenv("SECRET_KEY", "clave-solo-para-desarrollo-local-cambiar")
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
 
-NOMBRE_TIENDA = os.getenv("NOMBRE_TIENDA", "Retail Omnicanal")
+NOMBRE_TIENDA = os.getenv("NOMBRE_TIENDA", "OmniSport")
+SLOGAN_TIENDA = os.getenv("SLOGAN_TIENDA", "compra como quieras, retira donde quieras.")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -105,6 +106,11 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+
+# Fotos de productos subidas por el Administrador (se guardan en la carpeta media/ del proyecto).
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+IMAGEN_PRODUCTO_MAX_MB = 2
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_URL = "login"

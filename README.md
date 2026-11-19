@@ -5,8 +5,12 @@ Implementa lo descrito en el informe técnico (Caso 8): cuatro perfiles (Cliente
 inventario por sucursal con reservas, venta presencial, compra digital con pago por Adapter, pedidos con estados,
 devoluciones, avisos a Bodega y notificaciones por correo.
 
-El nombre de la tienda y los productos son **genéricos**: el nombre se cambia en `.env` (`NOMBRE_TIENDA`) y los productos
-desde el perfil Administrador o con un CSV (ver más abajo).
+La tienda es **OmniSport** (artículos deportivos). El nombre y el eslogan se cambian en `.env` (`NOMBRE_TIENDA` y
+`SLOGAN_TIENDA`), y los productos se administran desde el perfil Administrador (con fotos) o con un CSV (ver más abajo).
+
+**Novedades de diseño:** logo y paleta de OmniSport, catálogo con fotos cuadradas pequeñas, filtros y orden, detalle de
+producto, carrito con cantidad (+/−) y papelera, ícono de carrito con contador, menú que se contrae en pantallas chicas
+y modo claro/oscuro (el botón de la luna, arriba a la derecha; recuerda tu elección).
 
 ---
 
@@ -54,10 +58,13 @@ DB_PASSWORD=PON_AQUI_TU_CONTRASENA_DE_POSTGRES
 python manage.py migrate
 ```
 
-**Paso 6. Cargar los datos de demostración** (3 sucursales, 12 productos de ejemplo, un usuario por perfil)
+**Paso 6. Cargar los datos de demostración** (3 sucursales, un usuario por perfil y el catálogo deportivo con stock)
 ```powershell
 python manage.py cargar_datos_demo
+python manage.py cargar_catalogo_deportivo --desactivar-ejemplos
 ```
+El segundo comando carga los productos de `datos/productos_deportivos.csv` con stock inicial y oculta los
+"Producto de ejemplo" genéricos. Se puede repetir sin duplicar nada ni pisar el stock que ya exista.
 
 **Paso 7. Levantar el servidor**
 ```powershell
@@ -122,12 +129,15 @@ python manage.py respaldar_bd
 python manage.py restaurar_bd backups\omnicanal_FECHA.dump --si-estoy-seguro
 ```
 
-## 7. Cargar tus propios productos (cuando decidas qué vender)
-Crea un CSV con columnas `sku,nombre,descripcion,precio,umbral_stock_critico` y ejecuta:
+## 7. Productos, fotos y stock
+- **Productos nuevos:** los crea el Administrador en *Productos → Nuevo producto*. El SKU lo escribe él (único); el ID interno
+  se asigna solo. También se pueden cargar muchos juntos con un CSV de columnas `sku,nombre,descripcion,precio,umbral_stock_critico`:
 ```powershell
 python manage.py cargar_productos_csv mis_productos.csv
 ```
-El stock de cada sucursal lo ingresa el Bodeguero (Inventario → Ajustar).
+- **Fotos:** el Administrador las sube al crear o editar un producto (JPG, PNG o WEBP, hasta 2 MB; mejor si son cuadradas, por
+  ejemplo 800×800). Se guardan en la carpeta `media/`, que **no** se sube a GitHub. Sin foto se muestra un marcador.
+- **Stock:** lo ingresa el Bodeguero de cada sucursal (*Inventario → Ajustar*), indicando el stock total que quedará y el motivo.
 
 ## 8. Requerimientos y dónde verlos
 | RF | Dónde |
@@ -159,7 +169,7 @@ En `.env`: `PAGO_PROVEEDOR=paypal_sandbox`, `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_S
 el adaptador convierte según `PAYPAL_MONEDA` y `PAYPAL_CLP_POR_UNIDAD` (tasa de ejemplo que debes ajustar).
 **Importante:** ese adaptador está escrito según la documentación de PayPal pero **no fue probado contra PayPal real**.
 
-## 11. Pruebas automáticas
+## 11. Pruebas automáticas (82)
 ```powershell
 python manage.py test core
 ```
@@ -172,5 +182,6 @@ manage.py            config/ (configuración)       core/ (la aplicación)
 core/models.py       entidades del informe         core/services.py   reglas de negocio
 core/pagos.py        Adapter de pagos              core/views.py      pantallas
 core/templates/      frontend (HTML)               core/static/       estilos (CSS)
-core/management/     comandos (demo, procesos, respaldos, CSV)        core/tests.py
+core/management/     comandos (demo, catálogo deportivo, procesos, respaldos, CSV)   core/tests.py
+datos/               CSV del catálogo deportivo    media/ (fotos subidas, no va a GitHub)
 ```

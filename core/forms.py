@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 from django.forms import formset_factory
@@ -43,9 +44,19 @@ class RegistroForm(UserCreationForm):
 class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
-        fields = ["sku", "nombre", "descripcion", "precio", "umbral_stock_critico", "activo"]
-        labels = {"sku": "Código (SKU)", "precio": "Precio (CLP)", "umbral_stock_critico": "Umbral de stock crítico", "activo": "Activo (visible para la venta)"}
-        widgets = {"descripcion": forms.Textarea(attrs={"rows": 3})}
+        fields = ["sku", "nombre", "descripcion", "imagen", "precio", "umbral_stock_critico", "activo"]
+        labels = {"sku": "Código (SKU)", "imagen": "Foto del producto", "precio": "Precio (CLP)",
+                  "umbral_stock_critico": "Umbral de stock crítico", "activo": "Activo (visible para la venta)"}
+        widgets = {"descripcion": forms.Textarea(attrs={"rows": 3}),
+                   "imagen": forms.ClearableFileInput(attrs={"accept": "image/png,image/jpeg,image/webp"})}
+
+    def clean_imagen(self):
+        imagen = self.cleaned_data.get("imagen")
+        maximo = settings.IMAGEN_PRODUCTO_MAX_MB * 1024 * 1024
+        # Solo se revisa el tamaño cuando se sube un archivo nuevo (no al conservar o borrar la foto actual).
+        if imagen and hasattr(imagen, "size") and getattr(imagen, "content_type", None) and imagen.size > maximo:
+            raise forms.ValidationError(f"La foto pesa demasiado: el máximo es {settings.IMAGEN_PRODUCTO_MAX_MB} MB.")
+        return imagen
 
     def clean_precio(self):
         precio = self.cleaned_data["precio"]
@@ -80,6 +91,22 @@ ItemVentaFormSet = formset_factory(ItemVentaForm, extra=6)
 class VentaExtraForm(forms.Form):
     cliente_nombre = forms.CharField(label="Nombre del cliente (opcional)", max_length=120, required=False)
     requiere_bodega = forms.BooleanField(label="Requiere preparación o entrega por Bodega (genera aviso)", required=False, initial=True)
+
+
+class FiltroCatalogoForm(forms.Form):
+    """Filtros y orden del catálogo (se envían por GET, así se pueden compartir como enlace)."""
+
+    ORDENES = [("nombre", "Nombre (A-Z)"), ("precio_asc", "Precio: menor a mayor"), ("precio_desc", "Precio: mayor a menor")]
+    q = forms.CharField(label="Buscar", required=False, max_length=80)
+    sucursal = forms.ModelChoiceField(queryset=Sucursal.objects.none(), required=False, label="Sucursal", empty_label="Todas")
+    disponibles = forms.BooleanField(required=False, label="Solo con stock")
+    precio_min = forms.IntegerField(required=False, min_value=0, label="Precio mínimo")
+    precio_max = forms.IntegerField(required=False, min_value=0, label="Precio máximo")
+    orden = forms.ChoiceField(choices=ORDENES, required=False, label="Ordenar por")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["sucursal"].queryset = Sucursal.objects.filter(activa=True)
 
 
 class AgregarCarritoForm(forms.Form):

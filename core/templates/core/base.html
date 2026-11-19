@@ -1,46 +1,81 @@
-{% load static %}<!doctype html>
-<html lang="es">
+{% load static core_extras %}<!doctype html>
+<html lang="es" data-tema="claro">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block titulo %}{{ NOMBRE_TIENDA }}{% endblock %}</title>
+<link rel="icon" type="image/png" href="{% static 'core/img/favicon.png' %}">
+<script>
+/* Se aplica antes de pintar la página para evitar un destello: tema guardado o el del sistema. */
+(function(){var d=document.documentElement,t=null;d.className+=' js';
+try{t=localStorage.getItem('tema')}catch(e){}
+if(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches){t='oscuro'}
+d.setAttribute('data-tema',t==='oscuro'?'oscuro':'claro')})();
+</script>
 <link rel="stylesheet" href="{% static 'core/style.css' %}">
 </head>
 <body>
-<header class="top"><nav class="nav">
-  <a class="marca" href="{% url 'inicio' %}">{{ NOMBRE_TIENDA }}</a>
-  <a href="{% url 'catalogo' %}">Catálogo</a>
-  {% if es_cliente %}
-    <a href="{% url 'carrito' %}">Carrito</a>
-    <a href="{% url 'mis_pedidos' %}">Mis pedidos</a>
-    <a href="{% url 'mis_notificaciones' %}">Notificaciones</a>
-  {% elif es_admin %}
-    <a href="{% url 'productos' %}">Productos</a>
-    <a href="{% url 'stock_critico' %}">Stock crítico</a>
-  {% elif es_vendedor %}
-    <a href="{% url 'venta_nueva' %}">Nueva venta</a>
-    <a href="{% url 'ventas' %}">Ventas</a>
-    <a href="{% url 'devoluciones' %}">Devoluciones</a>
-  {% elif es_bodeguero %}
-    <a href="{% url 'inventario' %}">Inventario</a>
-    <a href="{% url 'pedidos_bodega' %}">Pedidos</a>
-    <a href="{% url 'avisos' %}">Avisos</a>
-    <a href="{% url 'recepciones' %}">Recepciones</a>
-    <a href="{% url 'movimientos' %}">Movimientos</a>
-    <a href="{% url 'stock_critico' %}">Stock crítico</a>
-  {% endif %}
-  {% if user.is_superuser %}<a href="{% url 'monitoreo' %}">Monitoreo</a><a href="/admin-tecnico/">Admin técnico</a>{% endif %}
-  <span class="espacio"></span>
-  {% if user.is_authenticated %}
-    <span>{{ user.get_username }}{% if perfil_actual %} · {{ perfil_actual.get_rol_display }}{% if perfil_actual.sucursal %} · {{ perfil_actual.sucursal }}{% endif %}{% endif %}</span>
-    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Salir</button></form>
-  {% else %}
-    <a href="{% url 'login' %}">Ingresar</a><a href="{% url 'registro' %}">Crear cuenta</a>
-  {% endif %}
-</nav></header>
-<main>
-{% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="i-carrito" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 7H6"/></symbol>
+  <symbol id="i-papelera" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+  <symbol id="i-buscar" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+  <symbol id="i-luna" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5Z"/></symbol>
+  <symbol id="i-mas" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-menos" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-foto" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="1.8"/><path d="m21 16-5-5-8 8"/></symbol>
+</defs></svg>
+<a class="saltar" href="#contenido">Saltar al contenido</a>
+<header class="top">
+  {% if SLOGAN_TIENDA %}<div class="franja" role="note" aria-label="{{ SLOGAN_TIENDA }}"><div class="franja-pista" aria-hidden="true"><span class="franja-grupo"><span class="franja-item">{{ SLOGAN_TIENDA }}</span><span class="franja-sep">&#9679;</span><span class="franja-item">{{ SLOGAN_TIENDA }}</span><span class="franja-sep">&#9679;</span><span class="franja-item">{{ SLOGAN_TIENDA }}</span><span class="franja-sep">&#9679;</span></span><span class="franja-grupo"><span class="franja-item">{{ SLOGAN_TIENDA }}</span><span class="franja-sep">&#9679;</span><span class="franja-item">{{ SLOGAN_TIENDA }}</span><span class="franja-sep">&#9679;</span><span class="franja-item">{{ SLOGAN_TIENDA }}</span><span class="franja-sep">&#9679;</span></span></div></div>{% endif %}
+  <div class="barra">
+    <button type="button" id="boton-menu" class="icono-btn menu-btn" aria-expanded="false" aria-controls="menu-principal"><svg class="ico" aria-hidden="true"><use href="#i-menu"/></svg><span class="sr">Menú</span></button>
+    <a class="marca" href="{% url 'inicio' %}"><img src="{% static 'core/img/logo-marca.png' %}" alt="{{ NOMBRE_TIENDA }}, ir al inicio"></a>
+    <form class="buscador" role="search" method="get" action="{% url 'catalogo' %}">
+      <label class="sr" for="buscar-global">Buscar productos</label>
+      <input type="search" id="buscar-global" name="q" placeholder="Buscar productos" value="{{ request.GET.q }}">
+      <button class="btn" type="submit"><svg class="ico" aria-hidden="true"><use href="#i-buscar"/></svg><span class="sr">Buscar</span></button>
+    </form>
+    <div class="acciones">
+      {% if es_cliente %}<a class="icono-btn" href="{% url 'carrito' %}"><svg class="ico" aria-hidden="true"><use href="#i-carrito"/></svg><span class="sr">Carrito, {{ carrito_cantidad }} producto{{ carrito_cantidad|pluralize }}</span>{% if carrito_cantidad %}<span class="badge" aria-hidden="true">{{ carrito_cantidad }}</span>{% endif %}</a>{% endif %}
+      <button type="button" id="tema" class="icono-btn" aria-pressed="false" title="Cambiar a modo oscuro"><svg class="ico" aria-hidden="true"><use href="#i-luna"/></svg><span class="sr">Modo oscuro</span></button>
+    </div>
+  </div>
+  <nav id="menu-principal" class="menu" aria-label="Principal"><div class="interior">
+    <a href="{% url 'catalogo' %}" {% actual 'catalogo' 'producto_detalle' %}>Catálogo</a>
+    {% if es_cliente %}
+      <a href="{% url 'carrito' %}" {% actual 'carrito' %}>Carrito</a>
+      <a href="{% url 'mis_pedidos' %}" {% actual 'mis_pedidos' 'mi_pedido' %}>Mis pedidos</a>
+      <a href="{% url 'mis_notificaciones' %}" {% actual 'mis_notificaciones' %}>Notificaciones</a>
+    {% elif es_admin %}
+      <a href="{% url 'productos' %}" {% actual 'productos' 'producto_nuevo' 'producto_editar' %}>Productos</a>
+      <a href="{% url 'stock_critico' %}" {% actual 'stock_critico' %}>Stock crítico</a>
+    {% elif es_vendedor %}
+      <a href="{% url 'venta_nueva' %}" {% actual 'venta_nueva' %}>Nueva venta</a>
+      <a href="{% url 'ventas' %}" {% actual 'ventas' 'venta_detalle' %}>Ventas</a>
+      <a href="{% url 'devoluciones' %}" {% actual 'devoluciones' 'devolucion_nueva' 'devolucion_detalle' %}>Devoluciones</a>
+    {% elif es_bodeguero %}
+      <a href="{% url 'inventario' %}" {% actual 'inventario' 'inventario_ajustar' %}>Inventario</a>
+      <a href="{% url 'pedidos_bodega' %}" {% actual 'pedidos_bodega' 'pedido_bodega' %}>Pedidos</a>
+      <a href="{% url 'avisos' %}" {% actual 'avisos' %}>Avisos</a>
+      <a href="{% url 'recepciones' %}" {% actual 'recepciones' 'recepcion_form' %}>Recepciones</a>
+      <a href="{% url 'movimientos' %}" {% actual 'movimientos' %}>Movimientos</a>
+      <a href="{% url 'stock_critico' %}" {% actual 'stock_critico' %}>Stock crítico</a>
+    {% endif %}
+    {% if user.is_superuser %}<a href="{% url 'monitoreo' %}" {% actual 'monitoreo' %}>Monitoreo</a><a href="/admin-tecnico/">Admin técnico</a>{% endif %}
+    <span class="espacio"></span>
+    {% if user.is_authenticated %}
+      <span class="usuario">{{ user.get_username }}{% if perfil_actual %} · {{ perfil_actual.get_rol_display }}{% if perfil_actual.sucursal %} · {{ perfil_actual.sucursal }}{% endif %}{% endif %}</span>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Salir</button></form>
+    {% else %}
+      <a class="btn-sesion" href="{% url 'login' %}" {% actual 'login' %}>Ingresar</a><a class="btn-sesion btn-sesion-destacado" href="{% url 'registro' %}" {% actual 'registro' %}>Crear cuenta</a>
+    {% endif %}
+  </div></nav>
+</header>
+<main id="contenido">
+{% for m in messages %}<div class="msg {{ m.tags }}" role="status">{{ m }}</div>{% endfor %}
 {% block contenido %}{% endblock %}
 </main>
-<footer>{{ NOMBRE_TIENDA }} · Sistema de Gestión Omnicanal para Retail · ejecución local</footer>
+<footer>{{ NOMBRE_TIENDA }} · {{ SLOGAN_TIENDA }}<br>Sistema de Gestión Omnicanal para Retail · ejecución local</footer>
+<script src="{% static 'core/app.js' %}"></script>
 </body></html>

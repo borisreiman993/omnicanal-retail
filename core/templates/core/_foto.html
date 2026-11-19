@@ -1,0 +1,1 @@
+{% load static %}{% if p.imagen %}<img class="foto {{ clase }}" src="{{ p.imagen.url }}" alt="{{ p.nombre }}" loading="lazy">{% else %}<div class="foto vacia {{ clase }}" role="img" aria-label="{{ p.nombre }}, sin foto"><svg class="ico" aria-hidden="true"><use href="#i-foto"/></svg></div>{% endif %}
