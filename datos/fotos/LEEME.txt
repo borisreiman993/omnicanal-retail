@@ -1,0 +1,5 @@
+Pon aquí las fotos de los productos, una por producto, nombradas con el SKU:
+  ZAP-001.jpg, POL-001.png, BAL-001.webp ...
+Formatos: JPG, PNG o WEBP, hasta 2 MB cada una. Lo ideal: foto cuadrada.
+Luego ejecuta:  python manage.py cargar_catalogo_deportivo --desactivar-ejemplos
+Las fotos se suben a GitHub junto con el proyecto.

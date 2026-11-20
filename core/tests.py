@@ -838,3 +838,55 @@ class TestCatalogoDeportivo(BaseDatos):
         call_command("cargar_catalogo_deportivo", "--desactivar-ejemplos", stdout=io.StringIO())
         self.assertFalse(Producto.objects.get(sku="PROD-001").activo)
         self.assertTrue(Producto.objects.get(sku="ZAP-001").activo)
+
+
+class TestFotosPorSku(BaseDatos):
+    PNG = (b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+           b"\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7\x9a\xa0\xa0\x00\x00\x00\x00IEND\xaeB`\x82")
+
+    def setUp(self):
+        super().setUp()
+        self.media = tempfile.mkdtemp()
+        self.fotos = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.media, True)
+        self.addCleanup(shutil.rmtree, self.fotos, True)
+
+    def cargar(self, *extra):
+        salida = io.StringIO()
+        with override_settings(MEDIA_ROOT=self.media):
+            call_command("cargar_catalogo_deportivo", "--carpeta-fotos", self.fotos, *extra, stdout=salida)
+        return salida.getvalue()
+
+    def foto(self, nombre, contenido=None):
+        with open(f"{self.fotos}/{nombre}", "wb") as f:
+            f.write(contenido or self.PNG)
+
+    def test_asigna_la_foto_cuyo_nombre_es_el_sku(self):
+        self.foto("zap-001.PNG")
+        texto = self.cargar()
+        p = Producto.objects.get(sku="ZAP-001")
+        self.assertTrue(p.imagen.name.startswith("productos/ZAP-001"))
+        self.assertFalse(Producto.objects.get(sku="ZAP-002").imagen)
+        self.assertIn("Fotos asignadas: 1", texto)
+
+    def test_no_reemplaza_una_foto_existente_salvo_que_se_pida(self):
+        self.foto("ZAP-001.png")
+        self.cargar()
+        antes = Producto.objects.get(sku="ZAP-001").imagen.name
+        self.foto("ZAP-001.png", self.PNG + b"x")
+        self.assertIn("Fotos asignadas: 0", self.cargar())
+        self.assertEqual(Producto.objects.get(sku="ZAP-001").imagen.name, antes)
+        self.assertIn("Fotos asignadas: 1", self.cargar("--reemplazar-fotos"))
+
+    def test_avisa_de_fotos_con_nombre_que_no_coincide_y_de_las_muy_pesadas(self):
+        self.foto("ZAPATO-XX.png")
+        self.foto("ZAP-002.png")
+        with override_settings(IMAGEN_PRODUCTO_MAX_MB=0):
+            texto = self.cargar()
+        self.assertIn("ZAPATO-XX", texto)
+        self.assertIn("ZAP-002.png pesa más", texto)
+        self.assertFalse(Producto.objects.get(sku="ZAP-002").imagen)
+
+    def test_sin_carpeta_de_fotos_no_falla(self):
+        shutil.rmtree(self.fotos)
+        self.assertIn("no hay carpeta de fotos", self.cargar())

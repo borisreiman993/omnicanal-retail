@@ -66,6 +66,12 @@ python manage.py cargar_catalogo_deportivo --desactivar-ejemplos
 El segundo comando carga los productos de `datos/productos_deportivos.csv` con stock inicial y oculta los
 "Producto de ejemplo" genéricos. Se puede repetir sin duplicar nada ni pisar el stock que ya exista.
 
+**Fotos de los productos por SKU:** copia las fotos a `datos/fotos/` con el SKU como nombre (`ZAP-001.jpg`,
+`POL-001.png`, `BAL-001.webp`...; JPG, PNG o WEBP de hasta 2 MB) y vuelve a ejecutar
+`python manage.py cargar_catalogo_deportivo --desactivar-ejemplos`. Asigna cada foto a su producto sin pisar las que ya
+tienen foto (usa `--reemplazar-fotos` para cambiarlas). Esas fotos sí viajan por GitHub, así que quien clone el
+proyecto las ve al ejecutar el comando.
+
 **Paso 7. Levantar el servidor**
 ```powershell
 python manage.py runserver
